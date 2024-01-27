@@ -39,12 +39,6 @@ new_data <- dat_cs %>%
   dplyr::select(participant_id, age, gravidity, parity, abortion, IUFD, Preterm_d, instrumental_d, C_S, ANC, mode_delivery_last, DM, PROM, PTL, APH, HDP, mode_delivery,medical_illness,number_ANC_cat)
 ```
 
-## Descriptiive table
-```{r}
-table1(~ mode_delivery_last + HDP, data= new_data)
-```
-
-
 ## explore the new data
 ```{r}
 colSums(is.na(new_data))
@@ -90,6 +84,12 @@ new_data$HDP <-ifelse(as.character(new_data$HDP) == "1", 1, 0)
 ##categorize age 
 new_data <- mutate(new_data, Age_cat= ifelse(new_data$age <20,1,ifelse(new_data$age >34,2,0)))
 ```
+ 
+ ## Descriptive table
+```{r}
+table1(~ as.factor(Age_cat) + as.factor(medical_illness) + as.factor(number_ANC_cat) + as.factor(abortion) + as.factor(IUFD) + as.factor(Preterm_d) + as.factor(C_S) + as.factor(ANC) + as.factor(mode_delivery_last) + as.factor(PROM) + as.factor(HDP) | as.factor(outcome), data= new_data) 
+```
+ 
  
 ```{r}
 full_fit <- glm(outcome~ parity +  abortion + PROM + HDP + mode_delivery_last + ANC+Advanced_age+number_ANC_cat+medical_illness, family= binomial, data = new_data)
