@@ -23,6 +23,7 @@ library(MASS)
 
 ## import the data
 ```{r}
+library(haven)
 dat_cs <- read_sav("thesis_data_NB.sav")
 ```
 
@@ -37,6 +38,12 @@ dat_cs <- dat_cs[-310, ]
 new_data <- dat_cs %>% 
   dplyr::select(participant_id, age, gravidity, parity, abortion, IUFD, Preterm_d, instrumental_d, C_S, ANC, mode_delivery_last, DM, PROM, PTL, APH, HDP, mode_delivery,medical_illness,number_ANC_cat)
 ```
+
+## Descriptiive table
+```{r}
+table1(~ mode_delivery_last + HDP, data= new_data)
+```
+
 
 ## explore the new data
 ```{r}
