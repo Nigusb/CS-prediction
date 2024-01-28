@@ -81,20 +81,35 @@ new_data$HDP <-ifelse(as.character(new_data$HDP) == "1", 1, 0)
 
 ## Parity
 new_data <- mutate(new_data, parity_cat= ifelse(parity > 4, 1,0))
+
+#APH
+new_data$APH <- ifelse(as.character(new_data$APH) == "1", 1,0)
 ```
  
  ## Descriptive table
 ```{r}
-table1(~ as.factor(Advanced_age) + as.factor(medical_illness) + as.factor(number_ANC_cat) + as.factor(abortion) + as.factor(IUFD) + as.factor(Preterm_d) + as.factor(C_S) + as.factor(ANC) + as.factor(mode_delivery_last) + as.factor(PROM) + as.factor(HDP) + as.factor(parity_cat) | as.factor(outcome), data= new_data) 
+table1(~ as.factor(Advanced_age) + as.factor(medical_illness) + as.factor(number_ANC_cat) + as.factor(abortion) + as.factor(IUFD) + as.factor(Preterm_d) + as.factor(C_S) + as.factor(ANC) + as.factor(mode_delivery_last) + as.factor(PROM) + as.factor(HDP) + as.factor(parity_cat) + as.factor(APH) | as.factor(outcome), data= new_data) 
+```
+ 
+ 
+ ## Convert variables to factor
+```{r}
+new_data %>% mutate_at(c('Advanced_age', 'HDP', 'PROM', 'Preterm_d', 'medical_illness', 'APH', 'abortion', 'number_ANC_cat', 'IUFD', 'ANC', 'mode_delivery_last', 'parity_cat', 'outcome'), as.factor)
+
 ```
  
  
  ## Table by outcome characteristics
 ```{r}
-Table_1 <- new_data %>% 
-  dplyr::select(-participant_id) %>% 
+
+new_data1 <- new_data %>% select(participant_id, Advanced_age, HDP, PROM, Preterm_d, medical_illness, APH, abortion, number_ANC_cat, IUFD, ANC, mode_delivery_last, parity_cat, outcome)
+
+Table_1 <- new_data1 %>% 
+  dplyr::select(- participant_id) %>% 
   tbl_summary(by= outcome) %>% 
   add_overall() 
+
+print(Table_1)
 ```
  
  
