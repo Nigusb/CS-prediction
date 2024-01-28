@@ -259,7 +259,7 @@ plot.roc(new_data$outcome, predsrisk,print.auc=TRUE)
 ```{r}
 library(dcurves)
 library(rmda)
-Dcred<-decision_curve(outcome~  HDP + APH + mode_delivery_last, family= binomial, data = new_data,thresholds = seq(0, 1, by = .01),confidence.intervals = 0.95) 
+Dcred<-decision_curve(outcome~  Advanced_age + HDP + APH + mode_delivery_last, family= binomial, data = new_data,thresholds = seq(0, 1, by = .01),confidence.intervals = 0.95) 
 # Define the colors for each line
 line.colors <- c("blue", "green","red")
 plot_decision_curve(x=Dcred, curve.names=c("Model", "Intervention for all", "Intervention for none"), cost.benefit.axis = TRUE,col = line.colors)
