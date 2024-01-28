@@ -33,7 +33,7 @@ dat_cs <- dat_cs[-310, ]
 ## filter the data
 ```{r}
 new_data <- dat_cs %>% 
-  dplyr::select(participant_id, age, gravidity, parity, abortion, IUFD, Preterm_d, instrumental_d, C_S, ANC, mode_delivery_last, DM, PROM, PTL, APH, HDP, mode_delivery,medical_illness,number_ANC_cat)
+  dplyr::select(participant_id, age, gravidity, parity, abortion, IUFD, Preterm_d, instrumental_d, C_S, ANC, mode_delivery_last, DM, PROM, PTL, APH, HDP, mode_delivery,medical_illness,number_ANC_cat, residence)
 ```
 
 ## explore the new data
@@ -94,7 +94,7 @@ table1(~ as.factor(Advanced_age) + as.factor(medical_illness) + as.factor(number
  
  ## Convert variables to factor
 ```{r}
-new_data %>% mutate_at(c('Advanced_age', 'HDP', 'PROM', 'Preterm_d', 'medical_illness', 'APH', 'abortion', 'number_ANC_cat', 'IUFD', 'ANC', 'mode_delivery_last', 'parity_cat', 'outcome'), as.factor)
+new_data %>% mutate_at(c('Advanced_age', 'HDP', 'PROM', 'Preterm_d', 'medical_illness', 'APH', 'abortion', 'number_ANC_cat', 'IUFD', 'ANC', 'mode_delivery_last', 'parity_cat', 'APH', 'outcome'), as.factor)
 
 ```
  
@@ -102,7 +102,7 @@ new_data %>% mutate_at(c('Advanced_age', 'HDP', 'PROM', 'Preterm_d', 'medical_il
  ## Table by outcome characteristics
 ```{r}
 
-new_data1 <- new_data %>% select(participant_id, Advanced_age, HDP, PROM, Preterm_d, medical_illness, APH, abortion, number_ANC_cat, IUFD, ANC, mode_delivery_last, parity_cat, outcome)
+new_data1 <- new_data %>% select(participant_id, Advanced_age, HDP, PROM, Preterm_d, medical_illness, APH, abortion, number_ANC_cat, IUFD, ANC, mode_delivery_last, parity_cat, APH, outcome)
 
 Table_1 <- new_data1 %>% 
   dplyr::select(- participant_id) %>% 
@@ -114,7 +114,7 @@ print(Table_1)
  
  
 ```{r}
-full_fit <- glm(outcome~ Advanced_age + abortion + parity_cat + mode_delivery_last + number_ANC_cat + medical_illness + HDP, family= binomial, data = new_data)
+full_fit <- glm(outcome~ Advanced_age + abortion + parity_cat + mode_delivery_last + number_ANC_cat + medical_illness + HDP + APH, family= binomial, data = new_data)
 
 summary(full_fit)
 
@@ -129,7 +129,7 @@ stepAIC(full_fit)
 
 ## reduced model
 ```{r}
-red_model <- full_fit <- glm(outcome~  HDP + mode_delivery_last, family= binomial, data = new_data)
+red_model <- full_fit <- glm(outcome~  HDP + APH + mode_delivery_last, family= binomial, data = new_data)
 
 ## ORs and CIs
 OR_CI <- exp(cbind(OR= coef(red_model), confint(red_model)))
@@ -173,13 +173,64 @@ lasso_coefficients <- coef(cv_fit, s = "lambda.min")
 print(lasso_coefficients)
 ```
 
+## Internal validation using bootstraping 
+```{r}
+# load packages
+library(boot)
+library(pROC)
+
+# Step 2: Define your prognostic model
+## Assuming you want to build a logistic regression model
+model <- glm(outcome ~ HDP + APH + mode_delivery_last, family = binomial, data = new_data)
+
+# Step 3: Define a function to compute the AUC
+auc <- function(new_data, indices) {
+  d <- new_data[indices, ]
+  model_fit <- glm(outcome ~ HDP + mode_delivery_last, family = binomial, data = d)
+  predicted <- predict(model_fit, newdata = d, type = "response")
+  observed <- d$outcome
+  return(pROC::auc(pROC::roc(observed, predicted)))
+}
+# Step 4: Perform bootstrap resampling
+boot_results <- boot(data = new_data, statistic = auc, R = 1000)
+
+# Step 5: Extract the AUC values for each bootstrap sample
+boot_auc <- boot_results$t
+print(boot_auc)
+```
+
+## Calculate overoptimsm coefficient 
+```{r}
+apparent_performance <- 0.777 
+true_perf <- mean(boot_auc)  # mean of the bootstrap sample
+over_opt_coef <- (apparent_performance - true_perf) / apparent_performance  # 0.04 --> low chance of overoptimism 
+```
+
+
 ## Risk_score calculation 
 ```{r}
+# convert to numeric
 new_data$HDP_rs<-as.numeric(new_data$HDP)
 new_data$mode_delivery_last_rs<-as.numeric(new_data$mode_delivery_last)
-new_data$Risk_score<-(1*new_data$HDP_rs)+(3*new_data$mode_delivery_last_rs)
+new_data$APH_rs <- as.numeric(new_data$APH)
+
+# calculate total risk score
+new_data$Risk_score<-(1*new_data$HDP_rs)+(3*new_data$mode_delivery_last_rs) + (2*new_data$APH_rs) 
 cor.test(new_data$outcome,new_data$Risk_score)
 ```
+
+## # calculate probability for corresponding risks
+```{r}
+length(new_data$participant_id[new_data$Risk_score=="0" & new_data$outcome=="1"])/ length(new_data$participant_id[new_data$Risk_score=="0"]) # risk 0.06
+length(new_data$participant_id[new_data$Risk_score=="1" & new_data$outcome=="1"])/ length(new_data$participant_id[new_data$Risk_score=="1"]) # risk 0.15
+length(new_data$participant_id[new_data$Risk_score=="2" & new_data$outcome=="1"])/ length(new_data$participant_id[new_data$Risk_score=="2"]) # risk 0.38
+length(new_data$participant_id[new_data$Risk_score=="3" & new_data$outcome=="1"])/ length(new_data$participant_id[new_data$Risk_score=="3"]) # risk 0.6
+length(new_data$participant_id[new_data$Risk_score=="4" & new_data$outcome=="1"])/ length(new_data$participant_id[new_data$Risk_score=="4"]) # risk 1
+length(new_data$participant_id[new_data$Risk_score=="5" & new_data$outcome=="1"])/ length(new_data$participant_id[new_data$Risk_score=="5"]) # risk 0.5
+
+
+```
+
 
 ##model with the risk score 
 ```{r}
