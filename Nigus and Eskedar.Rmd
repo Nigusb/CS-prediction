@@ -2,12 +2,16 @@
 title: "risk of CS among multi-parous women"
 author: "Eskedar and Nigus"
 date: "2023-12-09"
-output: html_document
+output:
+  word_document: default
+  html_document: default
 ---
 
 
 ##Load important pakage 
 ```{r}
+library(tidyverse)
+library(gtsummary)
 library(PredictABEL)
 library(pROC)
 library(readxl)
@@ -88,21 +92,22 @@ new_data$APH <- ifelse(as.character(new_data$APH) == "1", 1,0)
  
  ## Descriptive table
 ```{r}
+library(table1)
 table1(~ as.factor(Advanced_age) + as.factor(medical_illness) + as.factor(number_ANC_cat) + as.factor(abortion) + as.factor(IUFD) + as.factor(Preterm_d) + as.factor(C_S) + as.factor(ANC) + as.factor(mode_delivery_last) + as.factor(PROM) + as.factor(HDP) + as.factor(parity_cat) + as.factor(APH) | as.factor(outcome), data= new_data) 
 ```
  
  
  ## Convert variables to factor
 ```{r}
-new_data %>% mutate_at(c('Advanced_age', 'HDP', 'PROM', 'Preterm_d', 'medical_illness', 'APH', 'abortion', 'number_ANC_cat', 'IUFD', 'ANC', 'mode_delivery_last', 'parity_cat', 'APH', 'outcome'), as.factor)
+new_data %>% mutate_at(c('Advanced_age', 'HDP', 'PROM', 'Preterm_d', 'medical_illness', 'APH', 'abortion', 'number_ANC_cat', 'IUFD', 'ANC', 'mode_delivery_last', 'parity_cat', 'outcome'), as.factor)
 
 ```
  
  
  ## Table by outcome characteristics
 ```{r}
-
-new_data1 <- new_data %>% select(participant_id, Advanced_age, HDP, PROM, Preterm_d, medical_illness, APH, abortion, number_ANC_cat, IUFD, ANC, mode_delivery_last, parity_cat, APH, outcome)
+new_data1 <- new_data %>% 
+  dplyr::select(participant_id, Advanced_age, HDP, PROM, Preterm_d, medical_illness, APH, abortion, number_ANC_cat, IUFD, ANC, mode_delivery_last, parity_cat, outcome)
 
 Table_1 <- new_data1 %>% 
   dplyr::select(- participant_id) %>% 
