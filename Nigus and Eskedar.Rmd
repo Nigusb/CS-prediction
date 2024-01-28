@@ -203,7 +203,7 @@ print(boot_auc)
 ```{r}
 apparent_performance <- 0.777 
 true_perf <- mean(boot_auc)  # mean of the bootstrap sample
-over_opt_coef <- (apparent_performance - true_perf) / apparent_performance  # 0.04 --> low chance of overoptimism 
+over_opt_coef <- (apparent_performance - true_perf) / apparent_performance  # 0.04 --> low chance of overoptimism (less than 0.1)
 ```
 
 
@@ -219,7 +219,7 @@ new_data$Risk_score<-(1*new_data$HDP_rs)+(3*new_data$mode_delivery_last_rs) + (2
 cor.test(new_data$outcome,new_data$Risk_score)
 ```
 
-## # calculate probability for corresponding risks
+## # calculate probability of CS for corresponding risks
 ```{r}
 length(new_data$participant_id[new_data$Risk_score=="0" & new_data$outcome=="1"])/ length(new_data$participant_id[new_data$Risk_score=="0"]) # risk 0.06
 length(new_data$participant_id[new_data$Risk_score=="1" & new_data$outcome=="1"])/ length(new_data$participant_id[new_data$Risk_score=="1"]) # risk 0.15
@@ -245,5 +245,29 @@ Dcred<-decision_curve(outcome~  HDP + APH + mode_delivery_last, family= binomial
 # Define the colors for each line
 line.colors <- c("blue", "green","red")
 plot_decision_curve(x=Dcred, curve.names=c("Model", "Intervention for all", "Intervention for none"), cost.benefit.axis = TRUE,col = line.colors)
+```
+
+## Create nomogram for the risk score
+```{r}
+library(rms)
+##Creating new dataset
+newdata_nomogram<-new_data  %>% 
+  dplyr::select(outcome,HDP_rs,mode_delivery_last_rs,APH_rs)
+#Changing the variables to the form that we want to see in the chart
+newdata_nomogram$HDP <-factor(newdata_nomogram$HDP_rs,levels = c(0, 1), labels = c("No","Yes"))
+newdata_nomogram$Last_delivery <-factor(newdata_nomogram$mode_delivery_last_rs, levels = c(0, 1), labels= c("Vaginal","Cesarean"))
+newdata_nomogram$APH <- factor(newdata_nomogram$APH_rs,levels = c(0, 1), labels= c("No","Yes"))
+
+# Fit model
+model.rms <- lrm(outcome ~ HDP + Last_delivery + APH, data = newdata_nomogram)
+model.rms
+
+# plot the nomogram
+par(mar = c(5, 5, 4, 2) + 0.1)  # Adjust the margin sizes as needed
+data_nomogram <- datadist(newdata_nomogram) # define data distribution
+options(datadist = 'data_nomogram')
+nomogram <- nomogram(model.rms)
+plot(nomogram(model.rms, fun = plogis, funlabel = "Risk of CS among parous women"))
+
 ```
 
