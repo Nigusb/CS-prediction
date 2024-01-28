@@ -118,8 +118,36 @@ print(Table_1)
 ```
  
  
+ ## Model development using Least square absolute shrinkage operator  
 ```{r}
-full_fit <- glm(outcome~ Advanced_age + abortion + parity_cat + mode_delivery_last + number_ANC_cat + medical_illness + HDP + APH, family= binomial, data = new_data)
+## LASSO regression
+
+# Extract response variable 'outcome'
+y <- new_data$outcome
+
+# Select predictor variables
+x <- model.matrix(outcome~ Advanced_age + abortion + parity_cat + mode_delivery_last + number_ANC_cat + medical_illness + HDP + APH, family= binomial, data = new_data)[,-1]
+
+set.seed(123)  # for reproducibility
+
+library(glmnet)
+cv_fit <- cv.glmnet(x, y, family = "binomial")
+
+print(cv_fit$lambda.min)
+
+# Predict using the fitted model
+predictions <- predict(cv_fit, newx = x, s = "lambda.min", type = "response")
+
+# Get coefficients at the lambda that gives minimum mean cross-validated error
+lasso_coefficients <- coef(cv_fit, s = "lambda.min")
+
+# Print the coefficients
+print(lasso_coefficients)
+```
+ 
+ 
+```{r}
+full_fit <- glm(outcome~ Advanced_age + mode_delivery_last + HDP + APH, family= binomial, data = new_data)
 
 summary(full_fit)
 
@@ -143,50 +171,27 @@ round(OR_CI, digits = 3)
 
 ## model performance/calibration 
 ```{r}
-predicted_probabilities <- predict(red_model, type = "response")
+predicted_probabilities <- predict(full_fit, type = "response")
 calibration_data <- data.frame(Outcome = new_data$outcome, Predicted_Risks = predicted_probabilities)
-predRisk <- predRisk(red_model)
-plotCalibration(calibration_data, 1, predRisk, 10,plottitle = "Calibration_of_the_model")
+predRisk <- predRisk(full_fit)
+plotCalibration(calibration_data, 1, predRisk, 10,plottitle = "Calibration of the model")
 ```
 ## Model performance/descrimination plot
 ```{r}
-predsred = predict(red_model,type="response")
+predsred = predict(full_fit,type="response")
 plot.roc(new_data$outcome, predsred,print.auc=TRUE)
 ```
-##Model development using Least square absolute shrinkage operator 
-```{r}
-## LASSO regression
 
-# Extract response variable 'outcome'
-y <- new_data$outcome
-
-# Select predictor variables
-x <- model.matrix(outcome ~ parity + abortion + IUFD + PROM + HDP + mode_delivery_last + ANC, data = new_data)[,-1]
-
-set.seed(123)  # for reproducibility
-cv_fit <- cv.glmnet(x, y, family = "binomial")
-
-print(cv_fit$lambda.min)
-
-# Predict using the fitted model
-predictions <- predict(cv_fit, newx = x, s = "lambda.min", type = "response")
-
-# Get coefficients at the lambda that gives minimum mean cross-validated error
-lasso_coefficients <- coef(cv_fit, s = "lambda.min")
-
-# Print the coefficients
-print(lasso_coefficients)
-```
 
 ## Internal validation using bootstraping 
 ```{r}
-# load packages
+# step 1: load packages
 library(boot)
 library(pROC)
 
 # Step 2: Define your prognostic model
 ## Assuming you want to build a logistic regression model
-model <- glm(outcome ~ HDP + APH + mode_delivery_last, family = binomial, data = new_data)
+model <- glm(outcome ~ Advanced_age + HDP + APH + mode_delivery_last, family = binomial, data = new_data)
 
 # Step 3: Define a function to compute the AUC
 auc <- function(new_data, indices) {
@@ -196,7 +201,7 @@ auc <- function(new_data, indices) {
   observed <- d$outcome
   return(pROC::auc(pROC::roc(observed, predicted)))
 }
-# Step 4: Perform bootstrap resampling
+# Step 4: Perform bootstrap re-sampling
 boot_results <- boot(data = new_data, statistic = auc, R = 1000)
 
 # Step 5: Extract the AUC values for each bootstrap sample
@@ -204,34 +209,42 @@ boot_auc <- boot_results$t
 print(boot_auc)
 ```
 
-## Calculate overoptimsm coefficient 
+### Calculate overoptimsm coefficient 
 ```{r}
-apparent_performance <- 0.777 
-true_perf <- mean(boot_auc)  # mean of the bootstrap sample
-over_opt_coef <- (apparent_performance - true_perf) / apparent_performance  # 0.04 --> low chance of overoptimism (less than 0.1)
+apparent_performance <- 0.78 
+true_perf <- mean(boot_auc)  # mean of the 1000 bootstrap sample
+over_opt_coef <- (apparent_performance - true_perf) / apparent_performance 
+print(over_opt_coef)   # 0.04 --> low chance of overoptimism (less than 0.1)
 ```
 
 
 ## Risk_score calculation 
 ```{r}
 # convert to numeric
+new_data$Advanced_age_rs <- as.numeric(new_data$Advanced_age)
 new_data$HDP_rs<-as.numeric(new_data$HDP)
 new_data$mode_delivery_last_rs<-as.numeric(new_data$mode_delivery_last)
 new_data$APH_rs <- as.numeric(new_data$APH)
 
 # calculate total risk score
-new_data$Risk_score<-(1*new_data$HDP_rs)+(3*new_data$mode_delivery_last_rs) + (2*new_data$APH_rs) 
+new_data$Risk_score<- (1*new_data$Advanced_age_rs) + (11*new_data$mode_delivery_last_rs) + (3*new_data$HDP_rs) + (6*new_data$APH_rs) 
 cor.test(new_data$outcome,new_data$Risk_score)
 ```
 
 ## # calculate probability of CS for corresponding risks
 ```{r}
 length(new_data$participant_id[new_data$Risk_score=="0" & new_data$outcome=="1"])/ length(new_data$participant_id[new_data$Risk_score=="0"]) # risk 0.06
-length(new_data$participant_id[new_data$Risk_score=="1" & new_data$outcome=="1"])/ length(new_data$participant_id[new_data$Risk_score=="1"]) # risk 0.15
-length(new_data$participant_id[new_data$Risk_score=="2" & new_data$outcome=="1"])/ length(new_data$participant_id[new_data$Risk_score=="2"]) # risk 0.38
-length(new_data$participant_id[new_data$Risk_score=="3" & new_data$outcome=="1"])/ length(new_data$participant_id[new_data$Risk_score=="3"]) # risk 0.6
-length(new_data$participant_id[new_data$Risk_score=="4" & new_data$outcome=="1"])/ length(new_data$participant_id[new_data$Risk_score=="4"]) # risk 1
-length(new_data$participant_id[new_data$Risk_score=="5" & new_data$outcome=="1"])/ length(new_data$participant_id[new_data$Risk_score=="5"]) # risk 0.5
+length(new_data$participant_id[new_data$Risk_score=="1" & new_data$outcome=="1"])/ length(new_data$participant_id[new_data$Risk_score=="1"]) # risk 0.06
+length(new_data$participant_id[new_data$Risk_score=="3" & new_data$outcome=="1"])/ length(new_data$participant_id[new_data$Risk_score=="3"]) # risk 0.09
+length(new_data$participant_id[new_data$Risk_score=="4" & new_data$outcome=="1"])/ length(new_data$participant_id[new_data$Risk_score=="4"]) # risk 0.4
+length(new_data$participant_id[new_data$Risk_score=="6" & new_data$outcome=="1"])/ length(new_data$participant_id[new_data$Risk_score=="6"]) # risk 0.43
+length(new_data$participant_id[new_data$Risk_score=="7" & new_data$outcome=="1"])/ length(new_data$participant_id[new_data$Risk_score=="7"]) # risk 0.33
+length(new_data$participant_id[new_data$Risk_score=="10" & new_data$outcome=="1"])/ length(new_data$participant_id[new_data$Risk_score=="10"]) # risk 0.0
+length(new_data$participant_id[new_data$Risk_score=="11" & new_data$outcome=="1"])/ length(new_data$participant_id[new_data$Risk_score=="11"]) # risk 0.6
+length(new_data$participant_id[new_data$Risk_score=="12" & new_data$outcome=="1"])/ length(new_data$participant_id[new_data$Risk_score=="12"]) # risk 0.75
+length(new_data$participant_id[new_data$Risk_score=="14" & new_data$outcome=="1"])/ length(new_data$participant_id[new_data$Risk_score=="14"]) # risk 1
+length(new_data$participant_id[new_data$Risk_score=="17" & new_data$outcome=="1"])/ length(new_data$participant_id[new_data$Risk_score=="17"]) # risk 0.5
+
 
 
 ```
@@ -257,14 +270,16 @@ plot_decision_curve(x=Dcred, curve.names=c("Model", "Intervention for all", "Int
 library(rms)
 ##Creating new dataset
 newdata_nomogram<-new_data  %>% 
-  dplyr::select(outcome,HDP_rs,mode_delivery_last_rs,APH_rs)
+  dplyr::select(outcome,Advanced_age_rs, HDP_rs,mode_delivery_last_rs,APH_rs)
 #Changing the variables to the form that we want to see in the chart
+newdata_nomogram$Age <- factor(newdata_nomogram$Advanced_age_rs, levels = c(0, 1), labels = c("<35", ">=35"))
 newdata_nomogram$HDP <-factor(newdata_nomogram$HDP_rs,levels = c(0, 1), labels = c("No","Yes"))
 newdata_nomogram$Last_delivery <-factor(newdata_nomogram$mode_delivery_last_rs, levels = c(0, 1), labels= c("Vaginal","Cesarean"))
 newdata_nomogram$APH <- factor(newdata_nomogram$APH_rs,levels = c(0, 1), labels= c("No","Yes"))
 
 # Fit model
-model.rms <- lrm(outcome ~ HDP + Last_delivery + APH, data = newdata_nomogram)
+library(rms)
+model.rms <- lrm(outcome ~Age + Last_delivery + HDP + APH, data = newdata_nomogram)
 model.rms
 
 # plot the nomogram
@@ -272,7 +287,7 @@ par(mar = c(5, 5, 4, 2) + 0.1)  # Adjust the margin sizes as needed
 data_nomogram <- datadist(newdata_nomogram) # define data distribution
 options(datadist = 'data_nomogram')
 nomogram <- nomogram(model.rms)
-plot(nomogram(model.rms, fun = plogis, funlabel = "Risk of CS among parous women"))
+plot(nomogram(model.rms, fun = plogis, funlabel = "Risk of C-section"))
 
 ```
 
