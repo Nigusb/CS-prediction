@@ -6,9 +6,6 @@ output: html_document
 ---
 
 
-```{r}
-setwd("C:/Users/User/Desktop/Nigus")
-```
 ##Load important pakage 
 ```{r}
 library(PredictABEL)
@@ -81,20 +78,34 @@ new_data$PROM <-ifelse(as.character(new_data$PROM) == "1", 1, 0)
 
 ## HDP
 new_data$HDP <-ifelse(as.character(new_data$HDP) == "1", 1, 0)
-##categorize age 
-new_data <- mutate(new_data, Age_cat= ifelse(new_data$age <20,1,ifelse(new_data$age >34,2,0)))
+
+## Parity
+new_data <- mutate(new_data, parity_cat= ifelse(parity > 4, 1,0))
 ```
  
  ## Descriptive table
 ```{r}
-table1(~ as.factor(Age_cat) + as.factor(medical_illness) + as.factor(number_ANC_cat) + as.factor(abortion) + as.factor(IUFD) + as.factor(Preterm_d) + as.factor(C_S) + as.factor(ANC) + as.factor(mode_delivery_last) + as.factor(PROM) + as.factor(HDP) | as.factor(outcome), data= new_data) 
+table1(~ as.factor(Advanced_age) + as.factor(medical_illness) + as.factor(number_ANC_cat) + as.factor(abortion) + as.factor(IUFD) + as.factor(Preterm_d) + as.factor(C_S) + as.factor(ANC) + as.factor(mode_delivery_last) + as.factor(PROM) + as.factor(HDP) + as.factor(parity_cat) | as.factor(outcome), data= new_data) 
+```
+ 
+ 
+ ## Table by outcome characteristics
+```{r}
+Table_1 <- new_data %>% 
+  dplyr::select(-participant_id) %>% 
+  tbl_summary(by= outcome) %>% 
+  add_overall() 
 ```
  
  
 ```{r}
-full_fit <- glm(outcome~ parity +  abortion + PROM + HDP + mode_delivery_last + ANC+Advanced_age+number_ANC_cat+medical_illness, family= binomial, data = new_data)
+full_fit <- glm(outcome~ Advanced_age + abortion + parity_cat + mode_delivery_last + number_ANC_cat + medical_illness + HDP, family= binomial, data = new_data)
 
 summary(full_fit)
+
+## OR for full model
+OR_full <- exp(cbind(OR= coef(full_fit), confint(full_fit)))
+round(OR_full, digits = 3)
 
 ## model reduction
 
@@ -104,6 +115,10 @@ stepAIC(full_fit)
 ## reduced model
 ```{r}
 red_model <- full_fit <- glm(outcome~  HDP + mode_delivery_last, family= binomial, data = new_data)
+
+## ORs and CIs
+OR_CI <- exp(cbind(OR= coef(red_model), confint(red_model)))
+round(OR_CI, digits = 3)
 ```
 
 ## model performance/calibration 
@@ -113,7 +128,7 @@ calibration_data <- data.frame(Outcome = new_data$outcome, Predicted_Risks = pre
 predRisk <- predRisk(red_model)
 plotCalibration(calibration_data, 1, predRisk, 10,plottitle = "Calibration_of_the_model")
 ```
-###Calibration plot
+## Model performance/descrimination plot
 ```{r}
 predsred = predict(red_model,type="response")
 plot.roc(new_data$outcome, predsred,print.auc=TRUE)
