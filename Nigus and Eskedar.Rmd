@@ -118,7 +118,7 @@ print(Table_1)
 ```
  
  
- ## Model development using Least square absolute shrinkage operator  
+## Model development using Least square absolute shrinkage operator (LASSO) 
 ```{r}
 ## LASSO regression
 
@@ -142,7 +142,7 @@ predictions <- predict(cv_fit, newx = x, s = "lambda.min", type = "response")
 lasso_coefficients <- coef(cv_fit, s = "lambda.min")
 
 # Print the coefficients
-print(lasso_coefficients)
+print(lasso_coefficients)     # lambda value= 0.0097
 ```
  
  
@@ -212,7 +212,7 @@ print(boot_auc)
 ### Calculate overoptimsm coefficient 
 ```{r}
 apparent_performance <- 0.78 
-true_perf <- mean(boot_auc)  # mean of the 1000 bootstrap sample
+true_perf <- mean(boot_auc)  # mean of the 1000 bootstrap sample (74.47%)
 over_opt_coef <- (apparent_performance - true_perf) / apparent_performance 
 print(over_opt_coef)   # 0.04 --> low chance of overoptimism (less than 0.1)
 ```
