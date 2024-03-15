@@ -179,7 +179,7 @@ plotCalibration(calibration_data, 1, predRisk, 10,plottitle = "Calibration of th
 ## Model performance/descrimination plot
 ```{r}
 predsred = predict(full_fit,type="response")
-plot.roc(new_data$outcome, predsred,print.auc=TRUE)
+plot.roc(new_data$outcome, predsred,print.auc=TRUE, ci= T, col= "blue", lwd= 2)
 ```
 
 
