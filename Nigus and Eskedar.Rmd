@@ -38,6 +38,7 @@ dat_cs <- dat_cs[-310, ]
 ```{r}
 new_data <- dat_cs %>% 
   dplyr::select(participant_id, age, gravidity, parity, abortion, IUFD, Preterm_d, instrumental_d, C_S, ANC, mode_delivery_last, DM, PROM, PTL, APH, HDP, mode_delivery,medical_illness,number_ANC_cat, residence)
+write.csv(new_data, "CD_prediction_raw_data.csv")
 ```
 
 ## explore the new data
