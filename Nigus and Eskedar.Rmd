@@ -181,9 +181,11 @@ plotCalibration(calibration_data, 1, predRisk, 10,plottitle = "Calibration of th
 ```{r}
 predsred = predict(full_fit, type="response")
 auc_plot <- plot.roc(new_data$outcome, predsred,print.auc=TRUE, ci= T, col= "blue", lwd= 2)
+ci_obj <- ci.se(auc_plot, specificities = seq(0, 1, l = 25))
 plot(auc_plot, print.auc=TRUE,auc.polygon= TRUE, grid=c(0.1, 0.2),
-     grid.col= c("green", "red"), max.auc.polygon=TRUE,
+     max.auc.polygon=TRUE,
      auc.polygon.col= "lightblue", print.thres=FALSE)
+plot(ci_obj, type="shape", col="#1c61b6AA")
 ```
 
 
