@@ -1,15 +1,16 @@
 ---
 title: "risk of CS among multi-parous women"
-author: "Eskedar and Nigus"
+author: "Nigus Bililign Yimer & Eskedar Getie Mekonnen"
 date: "2023-12-09"
 output:
+  pdf_document: default 
   word_document: default
   html_document: default
 ---
 
 
 ##Load important pakage 
-```{r}
+```{r, include=TRUE}
 library(tidyverse)
 library(gtsummary)
 library(PredictABEL)
@@ -23,32 +24,32 @@ library(MASS)
 ```
 
 ## import the data
-```{r}
+```{r, include=FALSE}
 library(haven)
 dat_cs <- read_sav("thesis_data_NB.sav")
 ```
 
 ## explore the data
-```{r}
+```{r, include=FALSE}
 str(dat_cs)
 dat_cs <- dat_cs[-310, ]
 ```
 
 ## filter the data
-```{r}
+```{r, include=FALSE}
 new_data <- dat_cs %>% 
   dplyr::select(participant_id, age, gravidity, parity, abortion, IUFD, Preterm_d, instrumental_d, C_S, ANC, mode_delivery_last, DM, PROM, PTL, APH, HDP, mode_delivery,medical_illness,number_ANC_cat, residence)
 write.csv(new_data, "CD_prediction_raw_data.csv")
 ```
 
 ## explore the new data
-```{r}
+```{r, include=FALSE}
 colSums(is.na(new_data))
 str(new_data)
 ```
 
 ## recode variables
-```{r}
+```{r, include=FALSE}
 ## outcome
 new_data <- mutate(new_data, outcome= ifelse(as.character(new_data$mode_delivery) == "5", 1, 0))
 ##Advanced age
@@ -92,21 +93,21 @@ new_data$APH <- ifelse(as.character(new_data$APH) == "1", 1,0)
 ```
  
  ## Descriptive table
-```{r}
+```{r, include=FALSE}
 library(table1)
 table1(~ as.factor(Advanced_age) + as.factor(medical_illness) + as.factor(number_ANC_cat) + as.factor(abortion) + as.factor(IUFD) + as.factor(Preterm_d) + as.factor(C_S) + as.factor(ANC) + as.factor(mode_delivery_last) + as.factor(PROM) + as.factor(HDP) + as.factor(parity_cat) + as.factor(APH) | as.factor(outcome), data= new_data) 
 ```
  
  
  ## Convert variables to factor
-```{r}
+```{r, include=FALSE}
 new_data %>% mutate_at(c('Advanced_age', 'HDP', 'PROM', 'Preterm_d', 'medical_illness', 'APH', 'abortion', 'number_ANC_cat', 'IUFD', 'ANC', 'mode_delivery_last', 'parity_cat', 'outcome'), as.factor)
 
 ```
  
  
  ## Table by outcome characteristics
-```{r}
+```{r, include=FALSE}
 new_data1 <- new_data %>% 
   dplyr::select(participant_id, Advanced_age, HDP, PROM, Preterm_d, medical_illness, APH, abortion, number_ANC_cat, IUFD, ANC, mode_delivery_last, parity_cat, outcome)
 
@@ -120,7 +121,7 @@ print(Table_1)
  
  
 ## Model development using Least square absolute shrinkage operator (LASSO) 
-```{r}
+```{r, include=FALSE}
 ## LASSO regression
 
 # Extract response variable 'outcome'
@@ -147,7 +148,7 @@ print(lasso_coefficients)     # lambda value= 0.0097
 ```
  
  
-```{r}
+```{r, include=FALSE}
 full_fit <- glm(outcome~ Advanced_age + mode_delivery_last + HDP + APH, family= binomial, data = new_data)
 
 summary(full_fit)
@@ -162,7 +163,7 @@ stepAIC(full_fit)
 ```
 
 ## reduced model
-```{r}
+```{r, include=FALSE}
 red_model <- full_fit <- glm(outcome~  HDP + APH + mode_delivery_last, family= binomial, data = new_data)
 
 ## ORs and CIs
@@ -171,14 +172,14 @@ round(OR_CI, digits = 3)
 ```
 
 ## model performance/calibration 
-```{r}
+```{r, include=FALSE}
 predicted_probabilities <- predict(full_fit, type = "response")
 calibration_data <- data.frame(Outcome = new_data$outcome, Predicted_Risks = predicted_probabilities)
 predRisk <- predRisk(full_fit)
 plotCalibration(calibration_data, 1, predRisk, 10,plottitle = "Calibration of the model")
 ```
 ## Model performance/descrimination plot
-```{r}
+```{r, include=FALSE}
 predsred = predict(full_fit, type="response")
 auc_plot <- plot.roc(new_data$outcome, predsred,print.auc=TRUE, ci= T, col= "blue", lwd= 2)
 ci_obj <- ci.se(auc_plot, specificities = seq(0, 1, l = 25))
@@ -190,7 +191,7 @@ plot(ci_obj, type="shape", col="#1c61b6AA")
 
 
 ## Internal validation using bootstraping 
-```{r}
+```{r, include=FALSE}
 # step 1: load packages
 library(boot)
 library(pROC)
