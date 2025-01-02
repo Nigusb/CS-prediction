@@ -9,8 +9,10 @@ output:
 ---
 
 
+
 ##Load important pakage 
 ```{r, include=TRUE}
+
 library(tidyverse)
 library(gtsummary)
 library(PredictABEL)
@@ -19,7 +21,6 @@ library(readxl)
 library(haven)
 library(boot)
 library(ggplot2)
-library(tidyverse)
 library(MASS)
 ```
 
@@ -33,19 +34,28 @@ dat_cs <- read_sav("thesis_data_NB.sav")
 ```{r, include=FALSE}
 str(dat_cs)
 dat_cs <- dat_cs[-310, ]
+head(dat_cs)
+
 ```
 
 ## filter the data
 ```{r, include=FALSE}
 new_data <- dat_cs %>% 
   dplyr::select(participant_id, age, gravidity, parity, abortion, IUFD, Preterm_d, instrumental_d, C_S, ANC, mode_delivery_last, DM, PROM, PTL, APH, HDP, mode_delivery,medical_illness,number_ANC_cat, residence)
+
 write.csv(new_data, "CD_prediction_raw_data.csv")
 ```
+
+
 
 ## explore the new data
 ```{r, include=FALSE}
 colSums(is.na(new_data))
 str(new_data)
+summary(new_data$age)
+hist(new_data$age)
+table(new_data$abortion)
+prop.table(table(new_data$abortion))
 ```
 
 ## recode variables
@@ -203,7 +213,7 @@ model <- glm(outcome ~ Advanced_age + HDP + APH + mode_delivery_last, family = b
 # Step 3: Define a function to compute the AUC
 auc <- function(new_data, indices) {
   d <- new_data[indices, ]
-  model_fit <- glm(outcome ~ HDP + mode_delivery_last, family = binomial, data = d)
+  model_fit <- glm(outcome ~ APH + HDP + mode_delivery_last, family = binomial, data = d)
   predicted <- predict(model_fit, newdata = d, type = "response")
   observed <- d$outcome
   return(pROC::auc(pROC::roc(observed, predicted)))
