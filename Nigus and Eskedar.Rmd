@@ -9,9 +9,8 @@ output:
 ---
 
 
-
 ##Load important pakage 
-```{r, include=TRUE}
+```{r, include= FALSE}
 
 library(tidyverse)
 library(gtsummary)
@@ -22,6 +21,7 @@ library(haven)
 library(boot)
 library(ggplot2)
 library(MASS)
+
 ```
 
 ## import the data
@@ -40,7 +40,7 @@ head(dat_cs)
 
 ## filter the data
 ```{r, include=FALSE}
-new_data <- dat_cs %>% 
+new_data <- dat_cs %>%  
   dplyr::select(participant_id, age, gravidity, parity, abortion, IUFD, Preterm_d, instrumental_d, C_S, ANC, mode_delivery_last, DM, PROM, PTL, APH, HDP, mode_delivery,medical_illness,number_ANC_cat, residence)
 
 write.csv(new_data, "CD_prediction_raw_data.csv")
@@ -115,19 +115,6 @@ new_data %>% mutate_at(c('Advanced_age', 'HDP', 'PROM', 'Preterm_d', 'medical_il
 
 ```
  
- 
- ## Table by outcome characteristics
-```{r, include=FALSE}
-new_data1 <- new_data %>% 
-  dplyr::select(participant_id, Advanced_age, HDP, PROM, Preterm_d, medical_illness, APH, abortion, number_ANC_cat, IUFD, ANC, mode_delivery_last, parity_cat, outcome)
-
-Table_1 <- new_data1 %>% 
-  dplyr::select(- participant_id) %>% 
-  tbl_summary(by= outcome) %>% 
-  add_overall() 
-
-print(Table_1)
-```
  
  
 ## Model development using Least square absolute shrinkage operator (LASSO) 
